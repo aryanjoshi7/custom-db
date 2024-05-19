@@ -1,0 +1,3 @@
+/Users/aryanjoshi/Documents/Code/storage-engine/build/CMakeFiles/simple_example.dir
+/Users/aryanjoshi/Documents/Code/storage-engine/build/CMakeFiles/edit_cache.dir
+/Users/aryanjoshi/Documents/Code/storage-engine/build/CMakeFiles/rebuild_cache.dir
