@@ -1,3 +1,2 @@
-string
-int
-string
+age int
+location string

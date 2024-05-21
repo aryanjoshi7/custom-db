@@ -73,15 +73,15 @@ CMakeFiles/simple_example.dir/main.cpp.o: CMakeFiles/simple_example.dir/flags.ma
 CMakeFiles/simple_example.dir/main.cpp.o: /Users/aryanjoshi/Documents/Code/custom-db/storage-engine/main.cpp
 CMakeFiles/simple_example.dir/main.cpp.o: CMakeFiles/simple_example.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/aryanjoshi/Documents/Code/custom-db/storage-engine/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/simple_example.dir/main.cpp.o"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/simple_example.dir/main.cpp.o -MF CMakeFiles/simple_example.dir/main.cpp.o.d -o CMakeFiles/simple_example.dir/main.cpp.o -c /Users/aryanjoshi/Documents/Code/custom-db/storage-engine/main.cpp
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/simple_example.dir/main.cpp.o -MF CMakeFiles/simple_example.dir/main.cpp.o.d -o CMakeFiles/simple_example.dir/main.cpp.o -c /Users/aryanjoshi/Documents/Code/custom-db/storage-engine/main.cpp
 
 CMakeFiles/simple_example.dir/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/simple_example.dir/main.cpp.i"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aryanjoshi/Documents/Code/custom-db/storage-engine/main.cpp > CMakeFiles/simple_example.dir/main.cpp.i
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/aryanjoshi/Documents/Code/custom-db/storage-engine/main.cpp > CMakeFiles/simple_example.dir/main.cpp.i
 
 CMakeFiles/simple_example.dir/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/simple_example.dir/main.cpp.s"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aryanjoshi/Documents/Code/custom-db/storage-engine/main.cpp -o CMakeFiles/simple_example.dir/main.cpp.s
+	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/aryanjoshi/Documents/Code/custom-db/storage-engine/main.cpp -o CMakeFiles/simple_example.dir/main.cpp.s
 
 # Object files for target simple_example
 simple_example_OBJECTS = \

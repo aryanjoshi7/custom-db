@@ -69,5 +69,6 @@
         "fstream": "cpp",
         "iomanip": "cpp",
         "stack": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": true
 }

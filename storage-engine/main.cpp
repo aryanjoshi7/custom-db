@@ -44,6 +44,7 @@ int main() {
     DB table{tup};
     Transaction* tx2 = table.startTx(TxType::READ);
     Transaction* tx1 = table.startTx(TxType::WRITE);
+
     table.insertOp(tx1, "Bill", bill.serialize());
     Person res = Person::deserialize(table.getOp(tx1, "Bill"));
     assert(bill == res);
@@ -59,11 +60,13 @@ int main() {
 
     Transaction* tx3 = table.startTx(TxType::WRITE);
     Person res4 = Person::deserialize(table.getOp(tx3, "Bill"));
-    print(tx3->tid_start);
-    print(res4);
     assert(bill == res4);
     print("Assert passed");
-
+    assert(table.updateOp(tx3, "Bill", "location", std::string{"virginia"}));
+    assert(table.updateOp(tx3, "Bill", "age", 6));
+    Person res5 = Person::deserialize(table.getOp(tx3, "Bill"));
+    print(res5);
+    assert(6 == res5.age);
     
 
 }

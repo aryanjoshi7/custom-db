@@ -31,7 +31,7 @@ struct Row {
 };
 
 struct Change {
-    std::vector<bool> fieldsChanged;
+    std::string fieldChange;
     std::vector<char> oldData;
     bool isDeleted;
     int ts;
@@ -44,6 +44,7 @@ struct Transaction { // can read things that have lower txid and are commited
     int tid_commit;
     int tid;
     bool isCommited;
+    bool aborted;
     std::vector<Change*> changelog;
     std::vector<Row*> inserted;
 };
@@ -125,7 +126,9 @@ struct DB {
         }
         return true;
     }   
-    void printPage (char* str) {
+
+    void printPage (int pagenum) {
+        char* str = data[pagenum]->page;
         print("printing page");
         for (int i = 0 ; i < PAGESIZE; ++i) {
             if (str[i] == '\0') {
@@ -138,16 +141,26 @@ struct DB {
         std::cout << std::endl;
 
     }
-
-    void insertOp(Transaction* tx, std::string key, std::vector<char> val) {
+    void abortInsert(Row* row) {
+        keytoRow.erase(row->key);
+    }
+    void abort(Transaction* tx) {
+        for (Row* row: tx->inserted) {
+            abortInsert(row);
+        }
+    }
+    bool insertOp(Transaction* tx, std::string key, std::vector<char> val) {
         /*
         requirements
         well if that key doesnt exist then go ahead;
         if it does exist then need to check some transactions
         so i think you need to point key to the first version of it and then iterate
         */
+        // should you check this not really
+        // when should it abort, when inserting and another guy inserted that commited after start time or did not commit
         if (keytoRow.count(key)) {
-           return; 
+           abort(tx);
+           return false; 
         }
 
         int offset = nextOffset++;
@@ -158,7 +171,7 @@ struct DB {
         int page = currentPage;
 
         auto [row, valptr] = getSlot(page, offset);
-
+        print(row, (void*)valptr);
         memset(valptr, 0, valSize);
         row->tx_min = tx->tid_start;
         row->valSize = valSize;
@@ -168,6 +181,7 @@ struct DB {
         tx->inserted.push_back(row);
         keytoRow[key] = {page, offset};
         change_log[key] = nullptr;
+        return true;
         
     }
 
@@ -190,9 +204,58 @@ struct DB {
         std::vector<char> retval (val, val + valSize);
         return retval;
     }
-
+    std::pair<Row*, char*> getRow(std::string key) {
+        if (!keytoRow.count(key)) {
+            return {nullptr, nullptr};
+        }
+        auto [page, offset] = keytoRow[key];
+        return getSlot(page, offset);
+    }
     
+    
+    
+    template <typename T>
+    bool updateOp(Transaction* tx, std::string key, std::string field, T new_val) {
+        return updateOp_helper(tx, key, field, &new_val, sizeof(new_val));
+    }
+    bool updateOp(Transaction* tx, std::string key, std::string field, std::string new_val) {
+        return updateOp_helper(tx, key, field, new_val.c_str(), new_val.size());
+    }
+    template <typename T>
+    bool updateOp_helper(Transaction* tx, std::string key, std::string field, T* new_val, int new_val_size) {
+        // can edit if the most recent row has been commited before my start time
+        // else abort
+        if (!keytoRow.count(key)) {
+            return false;
+        }
+        auto [row, val] = getRow(key);
+        if (row == nullptr || val == nullptr) {
+            return false;
+        }
+        if (!isRowVisible(*row, tx)) {
+            //abort
+            return false;
+        }
+        auto [fieldOffest, fieldSize ] = tup.names[field];
+        char oldVal[fieldSize];
+        memcpy(&oldVal, val + fieldOffest, fieldSize);
+        memset(val + fieldOffest, 0, fieldSize);    
+       
+        memcpy(val + fieldOffest, new_val, new_val_size);
 
+        Change* change = new Change;
+        change->prev = change_log[key];
+        change->isDeleted = false;
+        change->ts = row->tx_max;
+        change->fieldChange = field;
+        change->oldData = std::vector<char> (oldVal, oldVal + fieldSize);
+        change_log[key] = change;
+        tx->changelog.push_back(change);
+
+        row->tid = tx->tid;
+        row->tx_max = 0;
+        return true;
+    }
 
 };
 
