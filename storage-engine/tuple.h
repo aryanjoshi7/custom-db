@@ -17,7 +17,6 @@ class tuple {
             return;
         }
         while (getline(stream, line)) {
-            std::cout << line << std::endl;
             if (line == "int") {
                 offsets.push_back(4);
                 totalSize += 4;
@@ -29,9 +28,6 @@ class tuple {
                 totalSize += 1;
 
             }
-        }
-        for (int i = 0; i < offsets.size(); ++i) {
-            std::cout << offsets[i] << std::endl;
         }
         std::reverse(offsets.begin() + 1, offsets.end());
     }

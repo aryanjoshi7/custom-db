@@ -6,6 +6,7 @@
 #include "tuple.h"
 #include <unordered_map>
 #include "print.h"
+#include <cassert>
 
 constexpr int PAGESIZE = 1024;
 constexpr int KEYSIZE = 64;
@@ -22,8 +23,8 @@ enum class TxType {
 
 
 struct Row {
-    int tx_min;
-    int tx_max;
+    int tx_min; // just used to check how far back in time you can go with the undo links
+    int tx_max; // used for the versioning - current version
     int valSize;
     int tid;
     char key[64];
@@ -44,6 +45,7 @@ struct Transaction { // can read things that have lower txid and are commited
     int tid;
     bool isCommited;
     std::vector<Change*> changelog;
+    std::vector<Row*> inserted;
 };
 
 
@@ -61,7 +63,7 @@ struct DB {
     std::array<Page*, numPages> data;
     std::atomic<int> currentPage = 0;
     std::atomic<int> nextOffset = 0;
-    std::atomic<int> lastCommited = 0;
+    std::atomic<int> lastCommited = 1;
     std::atomic<int> nextTxId = 1;
     std::unordered_map<int, Transaction> tx_map;
     std::unordered_map<std::string, std::pair<int, int>> keytoRow;
@@ -84,17 +86,25 @@ struct DB {
         void* orig = &(data[page]->page[offset*rowSize]);
         Row* res = (Row*)(&(data[page]->page[offset*rowSize]));
         void* valptr = (char*)(&res->key) + 64;
-        std::cout << res  <<  std::endl;
-        std::cout << valptr << std::endl;
         std::pair<Row *, char*> retval = {res, (char*)valptr};
-        std::cout << "getslot return" << std::endl;
         return retval;
     }
     bool isRowVisible (Row& row, Transaction *tx) {
-        // tx_min must be less than tid and commited
-        // tx_max must be more than tid;
-        print(row.tx_min,  tx->tid_start,  row.tx_max,  tx->tid_start, tx_map[row.tid].isCommited,  row.tid,  tx->tid);
-        return row.tx_min <= tx->tid_start && row.tx_max >= tx->tid_start && (tx_map[row.tid].isCommited || row.tid == tx->tid);
+        if (row.tid == tx->tid) {
+            return true;
+        }
+        // only want to read from transactions that commited before it started
+        // start id is = the last commit stamp
+        // the row's commit id must be less then or equal to tx's start
+        // commit id of a row is assigned at commit time
+        // if not commited it should be -1
+        // each new commit increments the commit id
+        // can you ahve more then one transaction committing at once
+        bool ret = row.tx_max <= tx->tid_start && row.tx_max;
+        if (ret) {
+            assert((tx_map[row.tid].isCommited));
+        }
+        return ret;
     }
 
     Transaction* startTx (TxType type) {
@@ -106,9 +116,13 @@ struct DB {
     }  
 
     bool commitTx (Transaction* tx) {
-        int commitTime = nextTxId.fetch_add(1) + 1;
-        tx_map[tx->tid_start].tid_commit = commitTime;
-        tx_map[tx->tid_start].isCommited = true;
+        int commitTime = lastCommited.fetch_add(1) + 1;
+        tx_map[tx->tid].tid_commit = commitTime;
+        tx_map[tx->tid].isCommited = true;
+        // loop through all changes and mark their commit time
+        for (Row* insertedRow: tx->inserted) {
+            insertedRow->tx_max = commitTime;
+        }
         return true;
     }   
     void printPage (char* str) {
@@ -122,9 +136,6 @@ struct DB {
             
         }
         std::cout << std::endl;
-        // if (fwrite(str, 1, 1024, stdout) != 1024) {
-        //     print("error printing");
-        // }
 
     }
 
@@ -135,7 +146,6 @@ struct DB {
         if it does exist then need to check some transactions
         so i think you need to point key to the first version of it and then iterate
         */
-        printPage(data[0]->page);
         if (keytoRow.count(key)) {
            return; 
         }
@@ -147,23 +157,15 @@ struct DB {
         }
         int page = currentPage;
 
-        std::pair<Row*, char*> slot = getSlot(page, offset);
-        Row* row = slot.first;
-        char* valptr = slot.second;
+        auto [row, valptr] = getSlot(page, offset);
+
         memset(valptr, 0, valSize);
         row->tx_min = tx->tid_start;
         row->valSize = valSize;
         row->tid = tx->tid;
-        print("tid is ", row->tid);
-        print("valsize is ", tup.totalSize);
-
-        printPage(data[0]->page);
         memcpy(&row->key, key.c_str(), key.size());
-        printPage(data[0]->page);
-        print(val);
-        memcpy(valptr + 64, val.data(), val.size());
-        printPage(data[0]->page);
-
+        memcpy(valptr, val.data(), val.size());
+        tx->inserted.push_back(row);
         keytoRow[key] = {page, offset};
         change_log[key] = nullptr;
         
@@ -174,20 +176,16 @@ struct DB {
     // }
 
     std::vector<char> getOp (Transaction* tx, std::string key) {
-        printPage(data[0]->page);
         if (!keytoRow.count(key)) {
             return {};
         }
         auto [page, offset] = keytoRow[key];
-        std::cout << page << " " << offset << std::endl;
         auto [row, val] = getSlot(page, offset);
-        std::cout << "jhee" <<std::endl;
-        
+        //print(row, (void*)val);
         if (!isRowVisible(*row, tx)) {
             std::cout << "exit" <<std::endl;
             return {};
         }
-        print("val size ", row->valSize);
 
         std::vector<char> retval (val, val + valSize);
         return retval;
